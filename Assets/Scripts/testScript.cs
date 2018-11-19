@@ -11,24 +11,34 @@ public class testScript : MonoBehaviour
     // Use this for initialization
     void Start()
     {
-        //var music = MidiMusic.Read(System.IO.File.OpenRead("mysong.mid"));
-        //var player = new MidiPlayer(music, output);
-        //player.EventReceived += (MidiEvent e) => {
-        //    if (e.EventType == MidiEvent.Program)
-        //        Debug.Log($"Program changed: Channel:{e.Channel} Instrument:{e.Msb}");
-        //};
-        //player.PlayAsync();
         SmfReader reader = new SmfReader();
-        reader.Read(System.IO.File.OpenRead("mysong.mid"));
+        reader.Read(File.OpenRead("mysong2.mid"));
         var music = reader.Music;
         var tracks = music.Tracks;
-        var splitMusic = SmfTrackSplitter.Split(tracks[0].Messages, music.DeltaTimeSpec);
-        byte[] data = splitMusic.Tracks[0].Messages[0].Event.Data;
         var stream = File.Create("newsong.mid");
         SmfWriter writer = new SmfWriter(stream);
-        writer.WriteHeader(music.Format, /*(short)music.Tracks.Count*/2, music.DeltaTimeSpec);
-        writer.WriteTrack(tracks[0]);
-        writer.WriteTrack(tracks[1]);
+        writer.WriteHeader(music.Format, (short)music.Tracks.Count, music.DeltaTimeSpec);
+        for (var i = 0; i < tracks.Count; i++)
+        {
+            var track = tracks[i];
+            int passedTime = 0;
+            var newTrack = new MidiTrack();
+            for (var j = 0; j < track.Messages.Count; j++)
+            {
+                var message = track.Messages[j];
+                passedTime += message.DeltaTime;
+
+                if (passedTime < 20000 || message.Event.EventType != MidiEvent.NoteOn && message.Event.EventType != MidiEvent.NoteOff)
+                {
+                    newTrack.AddMessage(message);
+                }
+            }
+            track = newTrack;
+            Debug.Log("Track " + tracks.IndexOf(track) + " Passed time:" + passedTime);
+            writer.WriteTrack(track);
+        }
+        Debug.Log("DELTA TIME: " + music.DeltaTimeSpec);
+        Debug.Log("DONE");
     }
 
     // Update is called once per frame
