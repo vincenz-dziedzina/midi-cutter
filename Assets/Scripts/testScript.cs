@@ -28,7 +28,7 @@ public class testScript : MonoBehaviour
                 var message = track.Messages[j];
                 passedTime += message.DeltaTime;
 
-                if (passedTime < 20000 || message.Event.EventType != MidiEvent.NoteOn && message.Event.EventType != MidiEvent.NoteOff)
+                if (passedTime < 20000)
                 {
                     newTrack.AddMessage(message);
                 }
@@ -37,8 +37,18 @@ public class testScript : MonoBehaviour
             Debug.Log("Track " + tracks.IndexOf(track) + " Passed time:" + passedTime);
             writer.WriteTrack(track);
         }
+        this.AddEndOfTrackMessage(tracks[0]);
         Debug.Log("DELTA TIME: " + music.DeltaTimeSpec);
         Debug.Log("DONE");
+    }
+
+    /// Only call once per MIDI as this marks the end of the MIDI.
+    /// To my knowledge it doesn't matter which track is passed.
+    private void AddEndOfTrackMessage(MidiTrack track)
+    {
+        var evt = new MidiEvent(12032); // 'FF 2F 00' -> end of track
+        var msg = new MidiMessage(0, evt);
+        track.AddMessage(msg);
     }
 
     // Update is called once per frame
