@@ -34,9 +34,7 @@ public class testScript : MonoBehaviour
 
                 passedTime += midiMessage.DeltaTime;
 
-                if(midiMessage.Event.EventType == MidiEvent.Meta) {
-                    newTrack.AddMessage(midiMessage);
-                } else if(passedTime < 2000) {
+                if(midiMessage.Event.EventType == MidiEvent.Meta || passedTime < 2000) {
                     newTrack.AddMessage(midiMessage);
                 }
             }
