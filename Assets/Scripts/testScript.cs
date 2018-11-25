@@ -13,44 +13,41 @@ public class testScript : MonoBehaviour
     {
         SmfReader reader = new SmfReader();
         reader.Read(File.OpenRead("mj.mid"));
-        var music = reader.Music;
-        var tracks = music.Tracks;
-        var stream = File.Create("newsong.mid");
+
+        MidiMusic music = reader.Music;
+        IList<MidiTrack> tracks = music.Tracks;
+        FileStream stream = File.Create("newsong.mid");
+
         SmfWriter writer = new SmfWriter(stream);
         writer.WriteHeader(music.Format, (short)music.Tracks.Count, music.DeltaTimeSpec);
 
         logMidiInformation(music);
 
-        logTrackEvents(tracks[0]);
+        for (var i = 0; i < tracks.Count; i++)
+        {
+            var track = tracks[i];
+            int passedTime = 0;
+            var newTrack = new MidiTrack();
+            for (var j = 0; j < track.Messages.Count; j++)
+            {
+                var midiMessage = track.Messages[j];
 
-        // for (var i = 0; i < tracks.Count; i++)
-        // {
-        //     Debug.Log("----------------- Track " + (i + 1) + " ------------------");
-        //     logTrackEvents(tracks[i]);
-        // }
+                passedTime += midiMessage.DeltaTime;
 
-        // for (var i = 0; i < tracks.Count; i++)
-        // {
-        //     var track = tracks[i];
-        //     int passedTime = 0;
-        //     var newTrack = new MidiTrack();
-        //     for (var j = 0; j < track.Messages.Count; j++)
-        //     {
-        //         var message = track.Messages[j];
-        //         passedTime += message.DeltaTime;
+                if(midiMessage.Event.EventType == MidiEvent.Meta) {
+                    newTrack.AddMessage(midiMessage);
+                } else if(passedTime < 2000) {
+                    newTrack.AddMessage(midiMessage);
+                }
+            }
 
-        //         if (passedTime < 20000)
-        //         {
-        //             newTrack.AddMessage(message);
-        //         }
-        //     }
-        //     track = newTrack;
-        //     Debug.Log("Track " + tracks.IndexOf(track) + " Passed time:" + passedTime);
-        //     writer.WriteTrack(track);
-        // }
-        // this.AddEndOfTrackMessage(tracks[0]);
-        // Debug.Log("DELTA TIME: " + music.DeltaTimeSpec);
-        // Debug.Log("DONE");
+            track = newTrack;
+            Debug.Log("Track " + tracks.IndexOf(track) + " Passed time:" + passedTime);
+            writer.WriteTrack(track);
+        }
+        this.AddEndOfTrackMessage(tracks[0]);
+        Debug.Log("DELTA TIME: " + music.DeltaTimeSpec);
+        Debug.Log("DONE");
     }
 
     /// Only call once per MIDI as this marks the end of the MIDI.
@@ -60,6 +57,21 @@ public class testScript : MonoBehaviour
         var evt = new MidiEvent(12032); // 'FF 2F 00' -> end of track
         var msg = new MidiMessage(0, evt);
         track.AddMessage(msg);
+    }
+
+    private void logTracks(IList<MidiTrack> tracks) {
+        for (int i = 0; i < tracks.Count; i++)
+        {
+            MidiTrack midiTrack = tracks[i];
+            foreach (var midiMessage in midiTrack.Messages)
+            {
+                Debug.Log("------------------------------Start of Midi Message--------------------------------");
+                if(midiMessage.Event.EventType == MidiEvent.Meta && midiMessage.Event.MetaType == MidiMetaType.EndOfTrack) {
+                    Debug.LogWarning("End of track event");
+                }
+                Debug.Log("-------------------------------End of Midi Message---------------------------------");
+            }
+        }
     }
 
     private void logMidiInformation(MidiMusic music) {
@@ -72,18 +84,27 @@ public class testScript : MonoBehaviour
         }
         catch (System.NotSupportedException)
         {
-            Debug.Log("Library does not support calculating time of music files with any format other than 0.");
+            Debug.Log("Library does not support calculating time of midi files with any format other than 0.");
         }
        
     }
 
-    private void logTrackEvents(MidiTrack midiTrack) {
-        foreach (var midiMessage in midiTrack.Messages)
-        {
-            Debug.Log("Midi message:");
-            Debug.Log("Delta time: " + midiMessage.DeltaTime);
-            Debug.Log("Event type: " + System.String.Format("{0:X}", midiMessage.Event.EventType));
-            Debug.Log("Meta type: " + System.String.Format("{0:X}", midiMessage.Event.MetaType));
+    private void logMidiMessage(MidiMessage midiMessage) {
+        Debug.Log("MidiMessage:");
+        Debug.Log("MidiMessage: " + midiMessage);
+        Debug.Log("Delta time: " + midiMessage.DeltaTime);
+        logMidiEvent(midiMessage.Event);
+    }
+
+    private void logMidiEvent(MidiEvent midiEvent) {
+        Debug.Log("Event:");
+        Debug.Log("Event type: " + System.String.Format("{0:X}", midiEvent.EventType));
+        Debug.Log("Event Meta type: " + System.String.Format("{0:X}", midiEvent.MetaType));
+
+        if(midiEvent.Data != null) {
+            Debug.Log("Data: " + System.BitConverter.ToString(midiEvent.Data));
+        } else {
+            Debug.Log("Data: None");
         }
     }
 
