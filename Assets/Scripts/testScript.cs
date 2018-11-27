@@ -13,24 +13,28 @@ public class testScript : MonoBehaviour
     {
         SmfReader reader = new SmfReader();
         reader.Read(File.OpenRead("mj.mid"));
-
         MidiMusic music = reader.Music;
-        IList<MidiTrack> tracks = music.Tracks;
-        Directory.CreateDirectory("midi-out");
-        FileStream stream = File.Create("midi-out/1.mid");
 
+        Directory.CreateDirectory("midi-out");
+        this.cutMusic(0, 20000, music, "midi-out/1.mid");
+
+        //LogMidiInformation(music);
+    }
+
+    private void cutMusic(int from, int to, MidiMusic music, string outputFilename)
+    {
+        FileStream stream = File.Create(outputFilename);
         SmfWriter writer = new SmfWriter(stream);
         writer.WriteHeader(music.Format, (short)music.Tracks.Count, music.DeltaTimeSpec);
-
-        LogMidiInformation(music);
-
+        IList<MidiTrack> tracks = music.Tracks;
         for (var i = 0; i < tracks.Count; i++)
         {
             var track = tracks[i];
             int passedTime = 0;
             var newTrack = new MidiTrack();
 
-            if(i == 0) {
+            if (i == 0)
+            {
                 AddSMPTEOffsetEvent(newTrack);
             }
 
@@ -40,7 +44,8 @@ public class testScript : MonoBehaviour
 
                 passedTime += midiMessage.DeltaTime;
 
-                if(midiMessage.Event.EventType == MidiEvent.Meta || passedTime < 20000) {
+                if (midiMessage.Event.EventType == MidiEvent.Meta || passedTime < 20000)
+                {
                     newTrack.AddMessage(midiMessage);
                 }
             }
