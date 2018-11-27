@@ -4,6 +4,7 @@ using System.Linq;
 using UnityEngine;
 using Commons.Music.Midi;
 using System.IO;
+using AssemblyCSharp.Assets.Scripts;
 
 public class testScript : MonoBehaviour
 {
@@ -42,7 +43,12 @@ public class testScript : MonoBehaviour
             {
                 var midiMessage = track.Messages[j];
                 passedTime += midiMessage.DeltaTime;
-                if (midiMessage.Event.EventType == MidiEvent.Meta || passedTime < to)
+                if (passedTime < from && midiMessage.Event.EventType == MidiEvent.Meta)
+                {
+                    var convertedMsg = MidiUtil.convertTimeToZero(midiMessage);
+                    newTrack.AddMessage(convertedMsg);
+                }
+                else if (midiMessage.Event.EventType == MidiEvent.Meta || passedTime < to && passedTime >= from)
                 {
                     newTrack.AddMessage(midiMessage);
                 }
@@ -53,6 +59,7 @@ public class testScript : MonoBehaviour
             writer.WriteTrack(track);
         }
         AddEndOfTrackMessage(tracks[0]);
+        stream.Close();
     }
 
     private void AddSMPTEOffsetEvent(MidiTrack track) {
