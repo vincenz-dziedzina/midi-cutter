@@ -90,3 +90,4 @@ sysinfo.txt
 
 # End of https://www.gitignore.io/api/unity,macos,monodevelop,visualstudiocode
 
+midi-out/
