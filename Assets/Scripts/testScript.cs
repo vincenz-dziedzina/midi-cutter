@@ -16,7 +16,7 @@ public class testScript : MonoBehaviour
         MidiMusic music = reader.Music;
 
         Directory.CreateDirectory("midi-out");
-        this.cutMusic(0, 20000, music, "midi-out/1.mid");
+        this.cutMusic(20000, 40000, music, "midi-out/1.mid");
 
         //LogMidiInformation(music);
     }
@@ -41,10 +41,8 @@ public class testScript : MonoBehaviour
             for (var j = 0; j < track.Messages.Count; j++)
             {
                 var midiMessage = track.Messages[j];
-
                 passedTime += midiMessage.DeltaTime;
-
-                if (midiMessage.Event.EventType == MidiEvent.Meta || passedTime < 20000)
+                if (midiMessage.Event.EventType == MidiEvent.Meta || passedTime < to)
                 {
                     newTrack.AddMessage(midiMessage);
                 }
@@ -55,8 +53,6 @@ public class testScript : MonoBehaviour
             writer.WriteTrack(track);
         }
         AddEndOfTrackMessage(tracks[0]);
-        Debug.Log("DELTA TIME: " + music.DeltaTimeSpec);
-        Debug.Log("DONE");
     }
 
     private void AddSMPTEOffsetEvent(MidiTrack track) {
