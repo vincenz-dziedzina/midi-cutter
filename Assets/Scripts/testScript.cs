@@ -16,7 +16,8 @@ public class testScript : MonoBehaviour
 
         MidiMusic music = reader.Music;
         IList<MidiTrack> tracks = music.Tracks;
-        FileStream stream = File.Create("newsong.mid");
+        Directory.CreateDirectory("midi-out");
+        FileStream stream = File.Create("midi-out/1.mid");
 
         SmfWriter writer = new SmfWriter(stream);
         writer.WriteHeader(music.Format, (short)music.Tracks.Count, music.DeltaTimeSpec);
