@@ -48,7 +48,11 @@ public class testScript : MonoBehaviour
                     var convertedMsg = MidiUtil.convertTimeToZero(midiMessage);
                     newTrack.AddMessage(convertedMsg);
                 }
-                else if (midiMessage.Event.EventType == MidiEvent.Meta || passedTime < to && passedTime >= from)
+                else if (passedTime < to && passedTime >= from)
+                {
+                    newTrack.AddMessage(midiMessage);
+                }
+                else if (midiMessage.Event.EventType == MidiEvent.Meta)
                 {
                     newTrack.AddMessage(midiMessage);
                 }
