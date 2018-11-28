@@ -33,12 +33,7 @@ public class testScript : MonoBehaviour
             var track = tracks[i];
             int passedTime = 0;
             var newTrack = new MidiTrack();
-
-            if (i == 0)
-            {
-                AddSMPTEOffsetEvent(newTrack);
-            }
-
+            bool isFirstMessage = true;
             for (var j = 0; j < track.Messages.Count; j++)
             {
                 var midiMessage = track.Messages[j];
@@ -50,7 +45,19 @@ public class testScript : MonoBehaviour
                 }
                 else if (passedTime < to && passedTime >= from)
                 {
-                    newTrack.AddMessage(midiMessage);
+                    if (isFirstMessage)
+                    {
+                        if (j > 0)
+                        {
+                            MidiMessage prevMessage = track.Messages[j - 1];
+                            // TODO: Fix the offset of the first playing note and trigger note-on if necessary.
+                        }
+                        isFirstMessage = false;
+                    }
+                    else
+                    {
+                        newTrack.AddMessage(midiMessage);
+                    }
                 }
                 else if (midiMessage.Event.EventType == MidiEvent.Meta)
                 {
