@@ -34,6 +34,7 @@ public class testScript : MonoBehaviour
             int passedTime = 0;
             var newTrack = new MidiTrack();
             bool isFirstMessage = true;
+
             for (var j = 0; j < track.Messages.Count; j++)
             {
                 var midiMessage = track.Messages[j];
@@ -124,10 +125,10 @@ public class testScript : MonoBehaviour
         Debug.Log("MidiMessage:");
         Debug.Log("MidiMessage: " + midiMessage);
         Debug.Log("Delta time: " + midiMessage.DeltaTime);
-        LogMidiMessage(midiMessage.Event);
+        LogMidiEvent(midiMessage.Event);
     }
 
-    private void LogMidiMessage(MidiEvent midiEvent) {
+    private void LogMidiEvent(MidiEvent midiEvent) {
         Debug.Log("Event:");
         Debug.Log("Event type: " + System.String.Format("{0:X}", midiEvent.EventType));
         Debug.Log("Event Meta type: " + System.String.Format("{0:X}", midiEvent.MetaType));
