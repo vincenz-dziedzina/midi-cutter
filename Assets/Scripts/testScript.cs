@@ -117,10 +117,10 @@ public class testScript : MonoBehaviour
         Debug.Log("MidiMessage:");
         Debug.Log("MidiMessage: " + midiMessage);
         Debug.Log("Delta time: " + midiMessage.DeltaTime);
-        LogMidiMessage(midiMessage.Event);
+        LogMidiEvent(midiMessage.Event);
     }
 
-    private void LogMidiMessage(MidiEvent midiEvent) {
+    private void LogMidiEvent(MidiEvent midiEvent) {
         Debug.Log("Event:");
         Debug.Log("Event type: " + System.String.Format("{0:X}", midiEvent.EventType));
         Debug.Log("Event Meta type: " + System.String.Format("{0:X}", midiEvent.MetaType));
