@@ -37,32 +37,33 @@ public class testScript : MonoBehaviour
 
             for (var j = 0; j < track.Messages.Count; j++)
             {
-                var midiMessage = track.Messages[j];
-                passedTime += midiMessage.DeltaTime;
-                if (passedTime < from && midiMessage.Event.EventType == MidiEvent.Meta)
+                var message = track.Messages[j];
+                passedTime += message.DeltaTime;
+                if (passedTime < from && message.Event.EventType == MidiEvent.Meta)
                 {
-                    var convertedMsg = MidiUtil.convertTimeToZero(midiMessage);
+                    var convertedMsg = MidiUtil.convertTimeToZero(message);
                     newTrack.AddMessage(convertedMsg);
                 }
                 else if (passedTime < to && passedTime >= from)
                 {
                     if (isFirstMessage)
                     {
-                        if (j > 0)
+                        // TODO: trigger note-on if necessary.
+                        if (message.Event.EventType == MidiEvent.NoteOn)
                         {
-                            MidiMessage prevMessage = track.Messages[j - 1];
-                            // TODO: Fix the offset of the first playing note and trigger note-on if necessary.
+                            int newDeltaTime = passedTime - from;
+                            track.Messages[j] = new MidiMessage(newDeltaTime, message.Event);
                         }
                         isFirstMessage = false;
                     }
                     else
                     {
-                        newTrack.AddMessage(midiMessage);
+                        newTrack.AddMessage(message);
                     }
                 }
-                else if (midiMessage.Event.EventType == MidiEvent.Meta)
+                else if (message.Event.EventType == MidiEvent.Meta)
                 {
-                    newTrack.AddMessage(midiMessage);
+                    newTrack.AddMessage(message);
                 }
             }
 
