@@ -13,11 +13,11 @@ public class testScript : MonoBehaviour
     void Start()
     {
         SmfReader reader = new SmfReader();
-        reader.Read(File.OpenRead("mj.mid"));
+        reader.Read(File.OpenRead("test.mid"));
         MidiMusic music = reader.Music;
 
         Directory.CreateDirectory("midi-out");
-        this.cutMusic(2000, 40000, music, "midi-out/1.mid");
+        this.cutMusic(10, 350, music, "midi-out/1.mid");
 
         //LogMidiInformation(music);
     }
@@ -49,11 +49,11 @@ public class testScript : MonoBehaviour
                     if (isFirstMessage)
                     {
                         // TODO: trigger note-on if necessary.
-                        if (message.Event.EventType == MidiEvent.NoteOn)
-                        {
+                        // if (message.Event.EventType == MidiEvent.NoteOn)
+                        // {
                             int newDeltaTime = passedTime - from;
                             track.Messages[j] = new MidiMessage(newDeltaTime, message.Event);
-                        }
+                        // }
                         isFirstMessage = false;
                     }
                     else
