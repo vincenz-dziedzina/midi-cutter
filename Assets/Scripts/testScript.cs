@@ -17,7 +17,7 @@ public class testScript : MonoBehaviour
         MidiMusic music = reader.Music;
 
         Directory.CreateDirectory("midi-out");
-        this.cutMusic(20000, 40000, music, "midi-out/1.mid");
+        this.cutMusic(2000, 40000, music, "midi-out/1.mid");
 
         //LogMidiInformation(music);
     }
@@ -39,7 +39,7 @@ public class testScript : MonoBehaviour
             {
                 var message = track.Messages[j];
                 passedTime += message.DeltaTime;
-                if (passedTime < from && message.Event.EventType == MidiEvent.Meta)
+                if (passedTime < from && message.Event.EventType != MidiEvent.NoteOn && message.Event.EventType != MidiEvent.NoteOff)
                 {
                     var convertedMsg = MidiUtil.convertTimeToZero(message);
                     newTrack.AddMessage(convertedMsg);
