@@ -17,7 +17,7 @@ public class testScript : MonoBehaviour
         MidiMusic music = reader.Music;
 
         Directory.CreateDirectory("midi-out");
-        this.cutMusic(2000, 40000, music, "midi-out/1.mid");
+        this.cutMusic(20000, 40000, music, "midi-out/1.mid");
 
         //LogMidiInformation(music);
     }
@@ -48,12 +48,8 @@ public class testScript : MonoBehaviour
                 {
                     if (isFirstMessage)
                     {
-                        // TODO: trigger note-on if necessary.
-                        if (message.Event.EventType == MidiEvent.NoteOn)
-                        {
-                            int newDeltaTime = passedTime - from;
-                            track.Messages[j] = new MidiMessage(newDeltaTime, message.Event);
-                        }
+                        int newDeltaTime = passedTime - from;
+                        newTrack.AddMessage(new MidiMessage(newDeltaTime, message.Event));
                         isFirstMessage = false;
                     }
                     else
