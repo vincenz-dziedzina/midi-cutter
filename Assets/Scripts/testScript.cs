@@ -13,12 +13,12 @@ public class testScript : MonoBehaviour
     void Start()
     {
         SmfReader reader = new SmfReader();
-        reader.Read(File.OpenRead("mj.mid"));
+        reader.Read(File.OpenRead("mysong2.mid"));
         MidiMusic music = reader.Music;
 
         Directory.CreateDirectory("midi-out");
-        this.cutMusic(100, 30000, music, "midi-out/1.mid");
-        
+        this.cutMusic(10000, 30000, music, "midi-out/1.mid");
+
         reader.Read(File.OpenRead("midi-out/1.mid"));
         MidiMusic musicCut = reader.Music;
 
@@ -43,6 +43,7 @@ public class testScript : MonoBehaviour
             {
                 var message = track.Messages[j];
                 passedTime += message.DeltaTime;
+
                 if (passedTime < from && message.Event.EventType != MidiEvent.NoteOn && message.Event.EventType != MidiEvent.NoteOff)
                 {
                     var convertedMsg = MidiUtil.convertTimeToZero(message);
@@ -61,26 +62,29 @@ public class testScript : MonoBehaviour
                         newTrack.AddMessage(message);
                     }
                 }
-                // else if (message.Event.EventType == MidiEvent.Meta)
-                // {
-                //     newTrack.AddMessage(message);
-                // }
+                else if (passedTime >= to && message.Event.EventType == MidiEvent.Meta && message.Event.MetaType == MidiMetaType.EndOfTrack)
+                {
+                    MidiMessage convertedMsg = MidiUtil.convertTimeToZero(message);
+                    newTrack.AddMessage(convertedMsg);
+                }
             }
 
             track = newTrack;
-            Debug.Log("Track " + (i + 1) + " Passed time:" + passedTime);
+            // Debug.Log("Track " + (i + 1) + " Passed time:" + passedTime);
             writer.WriteTrack(track);
         }
-        AddEndOfTrackMessage(tracks[0]);
+
         stream.Close();
     }
 
-    private double GetTimeLengthInMinutes(MidiMusic midiMusic) {
+    private double GetTimeLengthInMinutes(MidiMusic midiMusic)
+    {
         double timeLengthInMicroseconds = GetTimeLengthInMicroseconds(midiMusic);
         return timeLengthInMicroseconds / 1000000 / 60;
     }
 
-    private double GetTimeLengthInSeconds(MidiMusic midiMusic) {
+    private double GetTimeLengthInSeconds(MidiMusic midiMusic)
+    {
         double timeLengthInMicroseconds = GetTimeLengthInMicroseconds(midiMusic);
         return timeLengthInMicroseconds / 1000000;
     }
@@ -88,9 +92,7 @@ public class testScript : MonoBehaviour
     private double GetTimeLengthInMicroseconds(MidiMusic midiMusic)
     {
         short division = midiMusic.DeltaTimeSpec;
-        const double defaultTempo = 500000; // microseconds per quarter-note
-        // equals 120 beats per minute
-        // 500000 / 1000000 * 4 * 60 = 120
+        const double defaultTempo = 500000; // in microseconds per quarter-note, equals 120 beats per minute => 500000 / 1000000 * 4 * 60 = 120
         double currentTempo = defaultTempo;
         double microsecondsPerTick = 0d;
 
@@ -98,19 +100,22 @@ public class testScript : MonoBehaviour
         // Debug.Log("Divisions: " + System.Convert.ToString(((ushort) ushort.MaxValue), 2));
         // Debug.Log(short.MinValue);
 
-        if(division >> 15 == 0) {
+        if (division >> 15 == 0)
+        {
             // Debug.Log("MSB is 0");
-            microsecondsPerTick = currentTempo; // / division
+            microsecondsPerTick = currentTempo / division; //
             // Debug.Log("MicrosecondsPerTick: " + microsecondsPerTick);
-        } else {
+        }
+        else
+        {
             Debug.Log("MSB is 1");
             // calculate microsecondsPerTick
             // numberOfFramesPerSecond * ticksPerFrame = ticksPerSecond
             // microSecondsPerTick = 1000000 / ticksPerSecond
-         }
+        }
 
         double midiMusicTimeLength = 0d;
-        int index = 0;
+
         foreach (MidiTrack midiTrack in midiMusic.Tracks)
         {
             double trackTimeLength = 0d;
@@ -120,29 +125,27 @@ public class testScript : MonoBehaviour
                 trackTimeLength += midiMessage.DeltaTime * microsecondsPerTick;
                 MidiEvent midiEvent = midiMessage.Event;
 
-                if (midiEvent.EventType == MidiEvent.Meta && midiEvent.MetaType == MidiMetaType.Tempo) {
+                if (midiEvent.EventType == MidiEvent.Meta && midiEvent.MetaType == MidiMetaType.Tempo)
+                {
                     currentTempo = MidiMetaType.GetTempo(midiEvent.Data);
-                    microsecondsPerTick = currentTempo;
+                    microsecondsPerTick = currentTempo / division;
                 }
             }
 
-            Debug.Log("Track " + index + " length: " + trackTimeLength / division / 1000000 / 60);
-            
-            if (trackTimeLength > midiMusicTimeLength) {
+            if (trackTimeLength > midiMusicTimeLength)
+            {
                 midiMusicTimeLength = trackTimeLength;
             }
-
-            index++;
         }
 
-        return midiMusicTimeLength / division;
+        return midiMusicTimeLength;
     }
-    private void AddSMPTEOffsetEvent(MidiTrack track) 
+    private void AddSMPTEOffsetEvent(MidiTrack track)
     {
         track.AddMessage(new MidiMessage(0, new MidiEvent(
-            MidiEvent.Meta, 
-            MidiMetaType.SmpteOffset, 
-            (byte) 0x05, // length: 5 bytes will follow
+            MidiEvent.Meta,
+            MidiMetaType.SmpteOffset,
+            (byte)0x05, // length: 5 bytes will follow
             new byte[] { 0x01, 0x00, 0x05, 0x00, 0x00 })));
     }
 
@@ -150,19 +153,21 @@ public class testScript : MonoBehaviour
     /// To my knowledge it doesn't matter which track is passed.
     private void AddEndOfTrackMessage(MidiTrack track)
     {
-        var evt = new MidiEvent(MidiEvent.Meta, MidiMetaType.EndOfTrack, (byte) 0x00, null); // 'FF 2F 00' -> end of track
+        var evt = new MidiEvent(MidiEvent.Meta, MidiMetaType.EndOfTrack, (byte)0x00, null); // 'FF 2F 00' -> end of track
         var msg = new MidiMessage(0, evt);
         track.AddMessage(msg);
     }
 
-    private void LogTracks(IList<MidiTrack> tracks) {
+    private void LogTracks(IList<MidiTrack> tracks)
+    {
         for (int i = 0; i < tracks.Count; i++)
         {
             MidiTrack midiTrack = tracks[i];
             foreach (var midiMessage in midiTrack.Messages)
             {
                 Debug.Log("------------------------------Start of Midi Message--------------------------------");
-                if(midiMessage.Event.EventType == MidiEvent.Meta && midiMessage.Event.MetaType == MidiMetaType.EndOfTrack) {
+                if (midiMessage.Event.EventType == MidiEvent.Meta && midiMessage.Event.MetaType == MidiMetaType.EndOfTrack)
+                {
                     Debug.LogWarning("End of track event");
                 }
                 Debug.Log("-------------------------------End of Midi Message---------------------------------");
@@ -170,7 +175,8 @@ public class testScript : MonoBehaviour
         }
     }
 
-    private void LogMidiInformation(MidiMusic music) {
+    private void LogMidiInformation(MidiMusic music)
+    {
         Debug.Log("Divisions: " + System.Convert.ToString(music.DeltaTimeSpec, 2));
         Debug.Log("Format: " + music.Format);
         Debug.Log("Number of tracks: " + music.Tracks.Count);
@@ -182,24 +188,28 @@ public class testScript : MonoBehaviour
         {
             Debug.Log("Library does not support calculating time of midi files with any format other than 0.");
         }
-       
+
     }
 
-    private void LogMidiMessage(MidiMessage midiMessage) {
+    private void LogMidiMessage(MidiMessage midiMessage)
+    {
         Debug.Log("MidiMessage:");
-        Debug.Log("MidiMessage: " + midiMessage);
         Debug.Log("Delta time: " + midiMessage.DeltaTime);
         LogMidiEvent(midiMessage.Event);
     }
 
-    private void LogMidiEvent(MidiEvent midiEvent) {
+    private void LogMidiEvent(MidiEvent midiEvent)
+    {
         Debug.Log("Event:");
         Debug.Log("Event type: " + System.String.Format("{0:X}", midiEvent.EventType));
         Debug.Log("Event Meta type: " + System.String.Format("{0:X}", midiEvent.MetaType));
 
-        if(midiEvent.Data != null) {
+        if (midiEvent.Data != null)
+        {
             Debug.Log("Data: " + System.BitConverter.ToString(midiEvent.Data));
-        } else {
+        }
+        else
+        {
             Debug.Log("Data: None");
         }
     }
