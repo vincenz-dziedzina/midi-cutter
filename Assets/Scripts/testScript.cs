@@ -17,9 +17,13 @@ public class testScript : MonoBehaviour
         MidiMusic music = reader.Music;
 
         Directory.CreateDirectory("midi-out");
-        this.cutMusic(20000, 40000, music, "midi-out/1.mid");
+        this.cutMusic(100, 30000, music, "midi-out/1.mid");
+        
+        reader.Read(File.OpenRead("midi-out/1.mid"));
+        MidiMusic musicCut = reader.Music;
 
-        //LogMidiInformation(music);
+        Debug.Log("Original file length:" + GetTimeLengthInMinutes(music));
+        Debug.Log("Cut file length: " + GetTimeLengthInMinutes(musicCut));
     }
 
     private void cutMusic(int from, int to, MidiMusic music, string outputFilename)
@@ -44,7 +48,7 @@ public class testScript : MonoBehaviour
                     var convertedMsg = MidiUtil.convertTimeToZero(message);
                     newTrack.AddMessage(convertedMsg);
                 }
-                else if (passedTime < to && passedTime >= from)
+                else if (passedTime >= from && passedTime < to)
                 {
                     if (isFirstMessage)
                     {
@@ -57,10 +61,10 @@ public class testScript : MonoBehaviour
                         newTrack.AddMessage(message);
                     }
                 }
-                else if (message.Event.EventType == MidiEvent.Meta)
-                {
-                    newTrack.AddMessage(message);
-                }
+                // else if (message.Event.EventType == MidiEvent.Meta)
+                // {
+                //     newTrack.AddMessage(message);
+                // }
             }
 
             track = newTrack;
@@ -71,7 +75,70 @@ public class testScript : MonoBehaviour
         stream.Close();
     }
 
-    private void AddSMPTEOffsetEvent(MidiTrack track) {
+    private double GetTimeLengthInMinutes(MidiMusic midiMusic) {
+        double timeLengthInMicroseconds = GetTimeLengthInMicroseconds(midiMusic);
+        return timeLengthInMicroseconds / 1000000 / 60;
+    }
+
+    private double GetTimeLengthInSeconds(MidiMusic midiMusic) {
+        double timeLengthInMicroseconds = GetTimeLengthInMicroseconds(midiMusic);
+        return timeLengthInMicroseconds / 1000000;
+    }
+
+    private double GetTimeLengthInMicroseconds(MidiMusic midiMusic)
+    {
+        short division = midiMusic.DeltaTimeSpec;
+        const double defaultTempo = 500000; // microseconds per quarter-note
+        // equals 120 beats per minute
+        // 500000 / 1000000 * 4 * 60 = 120
+        double currentTempo = defaultTempo;
+        double microsecondsPerTick = 0d;
+
+        // Debug.Log("Divisions: " + System.Convert.ToString(division, 2).PadLeft(16, '0'));
+        // Debug.Log("Divisions: " + System.Convert.ToString(((ushort) ushort.MaxValue), 2));
+        // Debug.Log(short.MinValue);
+
+        if(division >> 15 == 0) {
+            // Debug.Log("MSB is 0");
+            microsecondsPerTick = currentTempo; // / division
+            // Debug.Log("MicrosecondsPerTick: " + microsecondsPerTick);
+        } else {
+            Debug.Log("MSB is 1");
+            // calculate microsecondsPerTick
+            // numberOfFramesPerSecond * ticksPerFrame = ticksPerSecond
+            // microSecondsPerTick = 1000000 / ticksPerSecond
+         }
+
+        double midiMusicTimeLength = 0d;
+        int index = 0;
+        foreach (MidiTrack midiTrack in midiMusic.Tracks)
+        {
+            double trackTimeLength = 0d;
+
+            foreach (MidiMessage midiMessage in midiTrack.Messages)
+            {
+                trackTimeLength += midiMessage.DeltaTime * microsecondsPerTick;
+                MidiEvent midiEvent = midiMessage.Event;
+
+                if (midiEvent.EventType == MidiEvent.Meta && midiEvent.MetaType == MidiMetaType.Tempo) {
+                    currentTempo = MidiMetaType.GetTempo(midiEvent.Data);
+                    microsecondsPerTick = currentTempo;
+                }
+            }
+
+            Debug.Log("Track " + index + " length: " + trackTimeLength / division / 1000000 / 60);
+            
+            if (trackTimeLength > midiMusicTimeLength) {
+                midiMusicTimeLength = trackTimeLength;
+            }
+
+            index++;
+        }
+
+        return midiMusicTimeLength / division;
+    }
+    private void AddSMPTEOffsetEvent(MidiTrack track) 
+    {
         track.AddMessage(new MidiMessage(0, new MidiEvent(
             MidiEvent.Meta, 
             MidiMetaType.SmpteOffset, 
