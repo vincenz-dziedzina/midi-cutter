@@ -91,27 +91,38 @@ public class testScript : MonoBehaviour
 
     private double GetTimeLengthInMicroseconds(MidiMusic midiMusic)
     {
-        short division = midiMusic.DeltaTimeSpec;
+        ushort division = (ushort) midiMusic.DeltaTimeSpec;
         const double defaultTempo = 500000; // in microseconds per quarter-note, equals 120 beats per minute => 500000 / 1000000 * 4 * 60 = 120
         double currentTempo = defaultTempo;
         double microsecondsPerTick = 0d;
 
-        // Debug.Log("Divisions: " + System.Convert.ToString(division, 2).PadLeft(16, '0'));
-        // Debug.Log("Divisions: " + System.Convert.ToString(((ushort) ushort.MaxValue), 2));
-        // Debug.Log(short.MinValue);
+        // division = 59512;
+
+        Debug.Log("Divisions: " + System.Convert.ToString(division, 2).PadLeft(16, '0'));
 
         if (division >> 15 == 0)
         {
-            // Debug.Log("MSB is 0");
-            microsecondsPerTick = currentTempo / division; //
+            Debug.Log("MSB is 0");
+
+            microsecondsPerTick = currentTempo / division;
             // Debug.Log("MicrosecondsPerTick: " + microsecondsPerTick);
         }
         else
-        {
+        {   
             Debug.Log("MSB is 1");
-            // calculate microsecondsPerTick
-            // numberOfFramesPerSecond * ticksPerFrame = ticksPerSecond
-            // microSecondsPerTick = 1000000 / ticksPerSecond
+
+            byte bitmask = 255; // 1111_1111
+            byte bits = (byte) ((division >> 8) & bitmask);
+            byte negatedFramesPerSecond = (byte) ~bits;
+            byte framesPerSecond = (byte) (negatedFramesPerSecond + 1);
+            Debug.Log("framesPerSecond: " + framesPerSecond);
+
+            byte ticksPerFrame = (byte) (division & bitmask);
+            Debug.Log("ticksPerFrame: " + System.Convert.ToString(ticksPerFrame, 2));
+            Debug.Log("ticksPerFrame: " + ticksPerFrame);
+
+            double ticksPerSecond = ticksPerFrame * framesPerSecond;
+            microsecondsPerTick = 1000000 / ticksPerSecond;
         }
 
         double midiMusicTimeLength = 0d;
