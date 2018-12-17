@@ -26,6 +26,7 @@ namespace midi_cutter.Assets.Scripts
         /// <summary>
         /// Reads the given file with the given fileName. Expects a MIDI standard file. Otherwise an error will be trown.
         /// </summary>
+        /// <param name="filePath">The path to the file.</param>
         public void readFile(string filePath) {
             FileStream fileStream = File.OpenRead(filePath);
             SmfReader reader = new SmfReader();
@@ -47,16 +48,24 @@ namespace midi_cutter.Assets.Scripts
                 d.Delete();
             }
         }
-
+        
         /// <summary>
         /// Creates a file with the passed name within the output-directory.
         /// </summary>
+        /// <param name="name">The filename including the extension.</param>
+        /// <returns>Returns the FileStream.</returns>
         private FileStream createFile(string name) 
         {
             string fullPath = Path.Combine(this.outputDirName, name);
             return File.Create(fullPath);
         }
 
+        /// <summary>
+        /// Cuts MIDI between "from" and "to" and writes the result to a new MIDI file.
+        /// </summary>
+        /// <param name="from">Start of the cut, inclusive.</param>
+        /// <param name="to">End of the cut, exclusive</param>
+        /// <param name="outputFileName">Name of resulting file written to the output-directory.</param>
         private void cutMusic(int from, int to, string outputFileName)
         {
             FileStream stream = this.createFile(outputFileName);
@@ -101,16 +110,25 @@ namespace midi_cutter.Assets.Scripts
             stream.Close();
         }
 
+        /// <summary>
+        /// Get the MIDI's duration in minutes.
+        /// </summary>
         public double GetDurationInMinutes()
         {
             return this.GetDurationInSeconds() / 60;
         }
 
+        /// <summary>
+        /// Get the MIDI's duration in seconds.
+        /// </summary>
         public double GetDurationInSeconds()
         {
             return GetDurationInMicroseconds() / 1000000;
         }
 
+        /// <summary>
+        /// Get the MIDI's duration in microseconds.
+        /// </summary>
         public double GetDurationInMicroseconds()
         {
             ushort division = (ushort) this.music.DeltaTimeSpec;
@@ -124,7 +142,7 @@ namespace midi_cutter.Assets.Scripts
             }
             else
             {   
-                byte bitmask = 255; // 1111_1111
+                byte bitmask = 0xFF; // 1111_1111
                 byte bits = (byte) ((division >> 8) & bitmask);
                 byte negatedFramesPerSecond = (byte) ~bits;
                 byte framesPerSecond = (byte) (negatedFramesPerSecond + 1);
