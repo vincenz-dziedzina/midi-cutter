@@ -11,7 +11,6 @@ namespace midi_cutter.Assets.Scripts
     {
         public string outputDirName;
         private MidiMusic music;
-        private const double defaultTempo = 500000; // in microseconds per quarter-note, equals 120 beats per minute => 500000 / 1000000 * 4 * 60 = 120
 
         // constructor
         public MidiCutter(string outputDir = "midi-out") 
@@ -101,7 +100,7 @@ namespace midi_cutter.Assets.Scripts
         private int microsecondsToTicks(MidiTrack track, double time, double microsecondsPerTick) 
         {
             ushort division = (ushort) this.music.DeltaTimeSpec;
-            double currentTempo = MidiCutter.defaultTempo;
+            double currentTempo = MidiUtil.MIDI_DEFAULT_TEMPO;
             int passedTicks = 0;
             double passedMicroSeconds = 0d;
 
@@ -203,7 +202,7 @@ namespace midi_cutter.Assets.Scripts
 
             if (division >> 15 == 0)
             {
-                return MidiCutter.defaultTempo / division;
+                return MidiUtil.MIDI_DEFAULT_TEMPO / division;
             } 
             else 
             {
@@ -225,7 +224,7 @@ namespace midi_cutter.Assets.Scripts
         {
             double microsecondsPerTick = this.getMirosecondsPerTick();
             ushort division = (ushort) this.music.DeltaTimeSpec;
-            double currentTempo = MidiCutter.defaultTempo;
+            double currentTempo = MidiUtil.MIDI_DEFAULT_TEMPO;
             double midiMusicTimeLength = 0d;
 
             foreach (MidiTrack midiTrack in this.music.Tracks)
