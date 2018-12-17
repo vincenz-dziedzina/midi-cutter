@@ -74,19 +74,31 @@ namespace midi_cutter.Assets.Scripts
             this.cutByTicks(fromTick, toTick, outputFileName);
         }
 
-        private int microsecondsToTicks(double cutTime) 
+        /// <summary>
+        /// Returns the exact tick at the time within the MIDI.
+        /// </summary>
+        /// <param name="time">The time in microseconds.</param>
+        /// <returns></returns>
+        private int microsecondsToTicks(double time) 
         {
             // return the maximum tick of all tracks, because otherwise we won't correctly target every track's tick if their lengths vary
             double microsecondsPerTick = this.getMirosecondsPerTick();
             IList<int> ticksPerTrack = new List<int>();
             foreach(MidiTrack track in this.music.Tracks) 
             {
-                ticksPerTrack.Add(this.microsecondsToTicks(track, cutTime, microsecondsPerTick));
+                ticksPerTrack.Add(this.microsecondsToTicks(track, time, microsecondsPerTick));
             }
             return ticksPerTrack.Max();
         }
 
-        private int microsecondsToTicks(MidiTrack track, double cutTime, double microsecondsPerTick) 
+        /// <summary>
+        /// Returns the exact tick at the time within a MIDI track.
+        /// </summary>
+        /// <param name="track">The MIDI track</param>
+        /// <param name="time">The time in microseconds.</param>
+        /// <param name="microsecondsPerTick">The microSeconds per tick of the MIDI file.</param>
+        /// <returns></returns>
+        private int microsecondsToTicks(MidiTrack track, double time, double microsecondsPerTick) 
         {
             ushort division = (ushort) this.music.DeltaTimeSpec;
             double currentTempo = MidiCutter.defaultTempo;
@@ -99,11 +111,11 @@ namespace midi_cutter.Assets.Scripts
                 passedTicks += midiMessage.DeltaTime;
                 MidiEvent midiEvent = midiMessage.Event;
 
-                if (passedMicroSeconds > cutTime) 
+                if (passedMicroSeconds > time) 
                 {
                     // if we overstepped the set time get the time between this message and the previous one
                     double prevMsgTime = passedMicroSeconds - midiMessage.DeltaTime * microsecondsPerTick;
-                    return (int) ((cutTime - prevMsgTime) / microsecondsPerTick); 
+                    return (int) ((time - prevMsgTime) / microsecondsPerTick); 
                 }
 
                 if (midiEvent.EventType == MidiEvent.Meta && midiEvent.MetaType == MidiMetaType.Tempo)
