@@ -8,7 +8,7 @@ public class MidiCutExample : MonoBehaviour
         MidiCutter cutter = new MidiCutter();
         cutter.readFile("mysong2.mid");
         Debug.Log("Duration (seconds): " + cutter.GetDurationInSeconds());
-        cutter.cut(25, 35, "new_out.mid");
+        cutter.cut(25000, 35000, "new_out.mid");
     }
 
 }

@@ -64,12 +64,12 @@ namespace midi_cutter.Assets.Scripts
         /// <summary>
         /// Cuts MIDI between "from" and "to" and writes the result to a new MIDI file.
         /// </summary>
-        /// <param name="fromTick">Start of the cut in seconds, inclusive.</param>
-        /// <param name="toTick">End of the cut in seconds, exclusive</param>
+        /// <param name="fromTick">Start of the cut in milliseconds, inclusive.</param>
+        /// <param name="toTick">End of the cut in milliseconds, exclusive</param>
         /// <param name="outputFileName">Name of resulting file written to the output-directory.</param>
         public void cut(double from, double to, string outputFileName) {
-            int fromTick = this.microsecondsToTicks(from * MidiUtil.MICROSECONDS_PER_SECOND);
-            int toTick = this.microsecondsToTicks(to * MidiUtil.MICROSECONDS_PER_SECOND);
+            int fromTick = this.microsecondsToTicks(from * MidiUtil.MICROSECONDS_PER_MILLISECOND);
+            int toTick = this.microsecondsToTicks(to * MidiUtil.MICROSECONDS_PER_MILLISECOND);
             this.cutByTicks(fromTick, toTick, outputFileName);
         }
 
@@ -81,7 +81,7 @@ namespace midi_cutter.Assets.Scripts
         private int microsecondsToTicks(double time) 
         {
             // return the maximum tick of all tracks, because otherwise we won't correctly target every track's tick if their lengths vary
-            double microsecondsPerTick = this.getMirosecondsPerTick();
+            double microsecondsPerTick = this.getMicrosecondsPerTick();
             IList<int> ticksPerTrack = new List<int>();
             foreach(MidiTrack track in this.music.Tracks) 
             {
@@ -177,6 +177,14 @@ namespace midi_cutter.Assets.Scripts
         }
 
         /// <summary>
+        /// Returns the number of tracks.
+        /// </summary>
+        /// <returns></returns>
+        public int getTrackCount() {
+            return this.music.Tracks.Count();
+        }
+
+        /// <summary>
         /// Get the MIDI's duration in minutes.
         /// </summary>
         public double GetDurationInMinutes()
@@ -196,7 +204,7 @@ namespace midi_cutter.Assets.Scripts
         /// Get the microSeconds per tick of the MIDI file. This may change throughout the song due to tempo events.
         /// </summary>
         /// <returns>The microseconds per tick.</returns>
-        private double getMirosecondsPerTick() 
+        private double getMicrosecondsPerTick() 
         {
             ushort division = (ushort) this.music.DeltaTimeSpec;
 
@@ -222,7 +230,7 @@ namespace midi_cutter.Assets.Scripts
         /// </summary>
         public double GetDurationInMicroseconds()
         {
-            double microsecondsPerTick = this.getMirosecondsPerTick();
+            double microsecondsPerTick = this.getMicrosecondsPerTick();
             ushort division = (ushort) this.music.DeltaTimeSpec;
             double currentTempo = MidiUtil.MIDI_DEFAULT_TEMPO;
             double midiMusicTimeLength = 0d;
