@@ -12,6 +12,12 @@ namespace midi_cutter.Assets.Scripts
         public string outputDirName;
         private MidiMusic music;
 
+        private struct Cut {
+            MidiTrack track;
+            int fromTick;
+            int toTick;
+        }
+
         // constructor
         public MidiCutter(string outputDir = "midi-out") 
         {
@@ -140,40 +146,66 @@ namespace midi_cutter.Assets.Scripts
 
             foreach (MidiTrack track in music.Tracks)
             {
-                int passedTicks = 0;
-                MidiTrack resultTrack = new MidiTrack();
-                bool isFirstMessage = true;
-
-                foreach (MidiMessage msg in track.Messages)
-                {
-                    passedTicks += msg.DeltaTime;
-
-                    // messages before 'from' or messages after 'to': 
-                    // Keep each message that isn't playing a note but give it a delta time of zero.
-                    if (passedTicks < fromTick && msg.Event.EventType != MidiEvent.NoteOn && msg.Event.EventType != MidiEvent.NoteOff ||
-                        passedTicks >= toTick && msg.Event.EventType == MidiEvent.Meta && msg.Event.MetaType == MidiMetaType.EndOfTrack)
-                    {
-                        MidiMessage convertedMsg = MidiUtil.convertTimeToZero(msg);
-                        resultTrack.AddMessage(convertedMsg);
-                    }
-                    // messages within 'from' and 'to': 
-                    // Keep these, just make sure the first message has the right time offset.
-                    else if (passedTicks >= fromTick && passedTicks < toTick)
-                    {
-                        if (isFirstMessage)
-                        {
-                            resultTrack.AddMessage(new MidiMessage(passedTicks - fromTick, msg.Event));
-                            isFirstMessage = false;
-                        }
-                        else
-                        {
-                            resultTrack.AddMessage(msg);
-                        }
-                    }
-                }
+                MidiTrack resultTrack = this.cutByTicks(track, fromTick, toTick);
                 writer.WriteTrack(resultTrack);
             }
             stream.Close();
+        }
+
+        private void writeTracksToFile(IList<MidiTrack> tracks, string outputFileName) 
+        {
+            FileStream stream = this.createFile(outputFileName);
+            SmfWriter writer = new SmfWriter(stream);
+            writer.WriteHeader(music.Format, (short) music.Tracks.Count, music.DeltaTimeSpec);
+            foreach (MidiTrack track in tracks)
+            {
+                writer.WriteTrack(track);
+            }
+            stream.Close();
+        }
+
+        private MidiTrack cutByTicks(MidiTrack track, int fromTick, int toTick) {
+            int passedTicks = 0;
+            MidiTrack resultTrack = new MidiTrack();
+            bool isFirstMessage = true;
+
+            foreach (MidiMessage msg in track.Messages)
+            {
+                passedTicks += msg.DeltaTime;
+
+                // messages before 'from' or messages after 'to': 
+                // Keep each message that isn't playing a note but give it a delta time of zero.
+                if (passedTicks < fromTick && msg.Event.EventType != MidiEvent.NoteOn && msg.Event.EventType != MidiEvent.NoteOff ||
+                    passedTicks >= toTick && msg.Event.EventType == MidiEvent.Meta && msg.Event.MetaType == MidiMetaType.EndOfTrack)
+                {
+                    MidiMessage convertedMsg = MidiUtil.convertTimeToZero(msg);
+                    resultTrack.AddMessage(convertedMsg);
+                }
+                // messages within 'from' and 'to': 
+                // Keep these, just make sure the first message has the right time offset.
+                else if (passedTicks >= fromTick && passedTicks < toTick)
+                {
+                    if (isFirstMessage)
+                    {
+                        resultTrack.AddMessage(new MidiMessage(passedTicks - fromTick, msg.Event));
+                        isFirstMessage = false;
+                    }
+                    else
+                    {
+                        resultTrack.AddMessage(msg);
+                    }
+                }
+            }
+            return resultTrack;
+        }
+
+        private IList<string> cutTracks(IList<Cut> cuts) 
+        {
+            foreach (Cut cut in cuts) 
+            {
+                // TODO: Implement
+            }
+            return null;
         }
 
         /// <summary>
