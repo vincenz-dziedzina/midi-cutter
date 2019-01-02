@@ -12,10 +12,10 @@ namespace midi_cutter.Assets.Scripts
         public string outputDirName;
         private MidiMusic music;
 
-        private struct Cut {
-            MidiTrack track;
-            int fromTick;
-            int toTick;
+        public struct CutSpecification {
+            public MidiTrack midiTrack;
+            public int fromTick;
+            public int toTick;
         }
 
         // constructor
@@ -67,16 +67,114 @@ namespace midi_cutter.Assets.Scripts
             return File.Create(fullPath);
         }
 
+
+        /// <summary>
+        /// Writes tracks to specified file
+        /// </summary>
+        /// <param name="outputFileName">Name of the destination file</param>
+        /// <param name="tracks">Tracks to write</param>
+        public void writeTracksToFile(IList<MidiTrack> tracks, string outputFileName) 
+        {
+            foreach(MidiTrack midiTrack in tracks)
+            {
+                FileStream stream = this.createFile(outputFileName);
+                SmfWriter writer = new SmfWriter(stream);
+
+                writer.WriteHeader(music.Format, (short) music.Tracks.Count, music.DeltaTimeSpec);
+                foreach (MidiTrack track in tracks)
+                {
+                    writer.WriteTrack(track);
+                }
+
+                stream.Close();
+            }
+        }
+
         /// <summary>
         /// Cuts MIDI between "from" and "to" and writes the result to a new MIDI file.
         /// </summary>
         /// <param name="fromTick">Start of the cut in milliseconds, inclusive.</param>
         /// <param name="toTick">End of the cut in milliseconds, exclusive</param>
         /// <param name="outputFileName">Name of resulting file written to the output-directory.</param>
-        public void cut(double from, double to, string outputFileName) {
+        public void cutMidiByMilliseconds(double from, double to, string outputFileName) {
             int fromTick = this.microsecondsToTicks(from * MidiUtil.MICROSECONDS_PER_MILLISECOND);
             int toTick = this.microsecondsToTicks(to * MidiUtil.MICROSECONDS_PER_MILLISECOND);
-            this.cutByTicks(fromTick, toTick, outputFileName);
+            cutMidiByTicks(fromTick, toTick, outputFileName);
+        }
+
+        /// <summary>
+        /// Cuts MIDI between "from" and "to" and writes the result to a new MIDI file.
+        /// </summary>
+        /// <param name="fromTick">Start of the cut in ticks, inclusive.</param>
+        /// <param name="toTick">End of the cut in ticks, exclusive</param>
+        /// <param name="outputFileName">Name of resulting file written to the output-directory.</param>
+        public void cutMidiByTicks(int fromTick, int toTick, string outputFileName)
+        {
+            IList<MidiTrack> cutMidiTracks = new List<MidiTrack>();
+
+            foreach (MidiTrack track in music.Tracks)
+            {
+                MidiTrack resultTrack = this.cutTrackByTicks(track, fromTick, toTick);
+                cutMidiTracks.Add(resultTrack);
+            }
+            
+            writeTracksToFile(cutMidiTracks, outputFileName);
+        }
+
+        /// <summary>
+        /// Cuts track by "from" and "to" in ticks
+        /// </summary>
+        /// <param name="track"></param>
+        /// <param name="fromTick"></param>
+        /// <param name="toTick"></param>
+        /// <returns></returns>
+        private MidiTrack cutTrackByTicks(MidiTrack track, int fromTick, int toTick) {
+            int passedTicks = 0;
+            MidiTrack resultTrack = new MidiTrack();
+            bool isFirstMessage = true;
+
+            foreach (MidiMessage msg in track.Messages)
+            {
+                passedTicks += msg.DeltaTime;
+
+                // messages before 'from' or messages after 'to': 
+                // Keep each message that isn't playing a note but give it a delta time of zero.
+                if (passedTicks < fromTick && msg.Event.EventType != MidiEvent.NoteOn && msg.Event.EventType != MidiEvent.NoteOff ||
+                    passedTicks >= toTick && msg.Event.EventType == MidiEvent.Meta && msg.Event.MetaType == MidiMetaType.EndOfTrack)
+                {
+                    MidiMessage convertedMsg = MidiUtil.convertTimeToZero(msg);
+                    resultTrack.AddMessage(convertedMsg);
+                }
+                // messages within 'from' and 'to': 
+                // Keep these, just make sure the first message has the right time offset.
+                else if (passedTicks >= fromTick && passedTicks < toTick)
+                {
+                    if (isFirstMessage)
+                    {
+                        resultTrack.AddMessage(new MidiMessage(passedTicks - fromTick, msg.Event));
+                        isFirstMessage = false;
+                    }
+                    else
+                    {
+                        resultTrack.AddMessage(msg);
+                    }
+                }
+            }
+
+            return resultTrack;
+        }
+
+        public IList<MidiTrack> cutTracksByCutSpecification(params CutSpecification[] cutSpecs)
+        {
+            IList<MidiTrack> cutMidiTracks = new List<MidiTrack>();
+
+            foreach (CutSpecification cutSpec in cutSpecs) 
+            {
+                MidiTrack track = cutTrackByTicks(cutSpec.midiTrack, cutSpec.fromTick, cutSpec.toTick);
+                cutMidiTracks.Add(track);
+            }
+
+            return cutMidiTracks;
         }
 
         /// <summary>
@@ -87,11 +185,11 @@ namespace midi_cutter.Assets.Scripts
         private int microsecondsToTicks(double time) 
         {
             // return the maximum tick of all tracks, because otherwise we won't correctly target every track's tick if their lengths vary
-            double microsecondsPerTick = this.getMicrosecondsPerTick();
+            double microsecondsPerTick = getMicrosecondsPerTick();
             IList<int> ticksPerTrack = new List<int>();
-            foreach(MidiTrack track in this.music.Tracks) 
+            foreach(MidiTrack track in music.Tracks) 
             {
-                ticksPerTrack.Add(this.microsecondsToTicks(track, time, microsecondsPerTick));
+                ticksPerTrack.Add(microsecondsToTicks(track, time, microsecondsPerTick));
             }
             return ticksPerTrack.Max();
         }
@@ -133,103 +231,11 @@ namespace midi_cutter.Assets.Scripts
         }
 
         /// <summary>
-        /// Cuts MIDI between "from" and "to" and writes the result to a new MIDI file.
-        /// </summary>
-        /// <param name="fromTick">Start of the cut in ticks, inclusive.</param>
-        /// <param name="toTick">End of the cut in ticks, exclusive</param>
-        /// <param name="outputFileName">Name of resulting file written to the output-directory.</param>
-        private void cutByTicks(int fromTick, int toTick, string outputFileName)
-        {
-            FileStream stream = this.createFile(outputFileName);
-            SmfWriter writer = new SmfWriter(stream);
-            writer.WriteHeader(music.Format, (short) music.Tracks.Count, music.DeltaTimeSpec);
-
-            foreach (MidiTrack track in music.Tracks)
-            {
-                MidiTrack resultTrack = this.cutByTicks(track, fromTick, toTick);
-                writer.WriteTrack(resultTrack);
-            }
-            stream.Close();
-        }
-
-        private void writeTracksToFile(IList<MidiTrack> tracks, string outputFileName) 
-        {
-            FileStream stream = this.createFile(outputFileName);
-            SmfWriter writer = new SmfWriter(stream);
-            writer.WriteHeader(music.Format, (short) music.Tracks.Count, music.DeltaTimeSpec);
-            foreach (MidiTrack track in tracks)
-            {
-                writer.WriteTrack(track);
-            }
-            stream.Close();
-        }
-
-        private MidiTrack cutByTicks(MidiTrack track, int fromTick, int toTick) {
-            int passedTicks = 0;
-            MidiTrack resultTrack = new MidiTrack();
-            bool isFirstMessage = true;
-
-            foreach (MidiMessage msg in track.Messages)
-            {
-                passedTicks += msg.DeltaTime;
-
-                // messages before 'from' or messages after 'to': 
-                // Keep each message that isn't playing a note but give it a delta time of zero.
-                if (passedTicks < fromTick && msg.Event.EventType != MidiEvent.NoteOn && msg.Event.EventType != MidiEvent.NoteOff ||
-                    passedTicks >= toTick && msg.Event.EventType == MidiEvent.Meta && msg.Event.MetaType == MidiMetaType.EndOfTrack)
-                {
-                    MidiMessage convertedMsg = MidiUtil.convertTimeToZero(msg);
-                    resultTrack.AddMessage(convertedMsg);
-                }
-                // messages within 'from' and 'to': 
-                // Keep these, just make sure the first message has the right time offset.
-                else if (passedTicks >= fromTick && passedTicks < toTick)
-                {
-                    if (isFirstMessage)
-                    {
-                        resultTrack.AddMessage(new MidiMessage(passedTicks - fromTick, msg.Event));
-                        isFirstMessage = false;
-                    }
-                    else
-                    {
-                        resultTrack.AddMessage(msg);
-                    }
-                }
-            }
-            return resultTrack;
-        }
-
-        private IList<string> cutTracks(IList<Cut> cuts) 
-        {
-            foreach (Cut cut in cuts) 
-            {
-                // TODO: Implement
-            }
-            return null;
-        }
-
-        /// <summary>
         /// Returns the number of tracks.
         /// </summary>
         /// <returns></returns>
         public int getTrackCount() {
             return this.music.Tracks.Count();
-        }
-
-        /// <summary>
-        /// Get the MIDI's duration in minutes.
-        /// </summary>
-        public double GetDurationInMinutes()
-        {
-            return this.GetDurationInSeconds() / MidiUtil.SECONDS_PER_MINUTE;
-        }
-
-        /// <summary>
-        /// Get the MIDI's duration in seconds.
-        /// </summary>
-        public double GetDurationInSeconds()
-        {
-            return GetDurationInMicroseconds() / MidiUtil.MICROSECONDS_PER_SECOND;
         }
 
         /// <summary>
@@ -255,6 +261,22 @@ namespace midi_cutter.Assets.Scripts
                 return 1000000 / ticksPerSecond;
             }
 
+        }
+
+        /// <summary>
+        /// Get the MIDI's duration in minutes.
+        /// </summary>
+        public double GetDurationInMinutes()
+        {
+            return this.GetDurationInSeconds() / MidiUtil.SECONDS_PER_MINUTE;
+        }
+
+        /// <summary>
+        /// Get the MIDI's duration in seconds.
+        /// </summary>
+        public double GetDurationInSeconds()
+        {
+            return GetDurationInMicroseconds() / MidiUtil.MICROSECONDS_PER_SECOND;
         }
 
         /// <summary>
