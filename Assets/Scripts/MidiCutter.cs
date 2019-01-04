@@ -16,6 +16,12 @@ namespace midi_cutter.Assets.Scripts
             public MidiTrack midiTrack;
             public int fromTick;
             public int toTick;
+
+            public CutSpecification(MidiTrack track, int fromTick, int toTick) {
+                this.midiTrack = track;
+                this.fromTick = fromTick;
+                this.toTick = toTick;
+            }
         }
 
         // constructor
@@ -67,6 +73,19 @@ namespace midi_cutter.Assets.Scripts
             return File.Create(fullPath);
         }
 
+        /// <summary>
+        /// Returns the tracks with the given track numbers. Always includes track "0" as that one includes meta-information other tracks rely on.
+        /// </summary>
+        /// <param name="trackNums">The track numbers</param>
+        /// <returns></returns>
+        public IList<MidiTrack> getTracks(IList<int> trackNums)
+        {
+            if (!trackNums.Contains(0))
+            {
+                trackNums.Add(0);
+            }
+            return trackNums.Select(trackNum => this.music.Tracks[trackNum]).ToList();
+        } 
 
         /// <summary>
         /// Writes tracks to specified file
@@ -108,7 +127,7 @@ namespace midi_cutter.Assets.Scripts
         /// <param name="fromTick">Start of the cut in ticks, inclusive.</param>
         /// <param name="toTick">End of the cut in ticks, exclusive</param>
         /// <param name="outputFileName">Name of resulting file written to the output-directory.</param>
-        public void cutMidiByTicks(int fromTick, int toTick, string outputFileName)
+        private void cutMidiByTicks(int fromTick, int toTick, string outputFileName)
         {
             IList<MidiTrack> cutMidiTracks = new List<MidiTrack>();
 
@@ -164,7 +183,7 @@ namespace midi_cutter.Assets.Scripts
             return resultTrack;
         }
 
-        public IList<MidiTrack> cutTracksByCutSpecification(params CutSpecification[] cutSpecs)
+        public IList<MidiTrack> cutTracksByCutSpecification(IList<CutSpecification> cutSpecs)
         {
             IList<MidiTrack> cutMidiTracks = new List<MidiTrack>();
 
@@ -231,11 +250,11 @@ namespace midi_cutter.Assets.Scripts
         }
 
         /// <summary>
-        /// Returns the number of tracks.
+        /// Returns the number of tracks excluding the meta track.
         /// </summary>
         /// <returns></returns>
         public int getTrackCount() {
-            return this.music.Tracks.Count();
+            return this.music.Tracks.Count() - 1;
         }
 
         /// <summary>
