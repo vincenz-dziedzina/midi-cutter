@@ -7,24 +7,24 @@ using System.Linq;
 namespace midi_cutter.Assets.Scripts
 {
 
+    public struct CutSpecification
+    {
+        public MidiTrack midiTrack;
+        public int fromTick;
+        public int toTick;
+
+        public CutSpecification(MidiTrack track, int fromTick, int toTick)
+        {
+            this.midiTrack = track;
+            this.fromTick = fromTick;
+            this.toTick = toTick;
+        }
+    }
+
     public class MidiCutter
     {
         public string outputDirName;
         private MidiMusic music;
-
-        public struct CutSpecification
-        {
-            public MidiTrack midiTrack;
-            public int fromTick;
-            public int toTick;
-
-            public CutSpecification(MidiTrack track, int fromTick, int toTick)
-            {
-                this.midiTrack = track;
-                this.fromTick = fromTick;
-                this.toTick = toTick;
-            }
-        }
 
         // constructor
         public MidiCutter(string outputDir = "midi-out")
@@ -114,7 +114,7 @@ namespace midi_cutter.Assets.Scripts
                 stream.Close();
             }
         }
-        
+
         /// <summary>
         /// Cuts MIDI between "from" and "to" and writes the result to a new MIDI file.
         /// </summary>
