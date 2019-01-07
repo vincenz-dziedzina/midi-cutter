@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using AssemblyCSharp.Assets.Scripts;
 using Commons.Music.Midi;
 using System.Linq;
+using UnityEngine;
 
 namespace midi_cutter.Assets.Scripts
 {
@@ -175,6 +176,12 @@ namespace midi_cutter.Assets.Scripts
                 }
             }
 
+
+            // MidiEvent endOfTrackEvent = new MidiEvent(MidiEvent.Meta, MidiMetaType.EndOfTrack, (byte) 0x00, new byte[0]);
+            // resultTrack.AddMessage(new MidiMessage(0, endOfTrackEvent));
+
+            printTrackMessages(resultTrack);
+
             return resultTrack;
         }
 
@@ -326,5 +333,46 @@ namespace midi_cutter.Assets.Scripts
             }
             return midiMusicTimeLength;
         }
+
+        /// <summary>
+        /// Get the MIDI's duration in ticks.
+        /// </summary>
+        public double GetDurationInTicks()
+        {
+            int ticks = 0;
+
+            foreach (MidiTrack midiTrack in this.music.Tracks)
+            {
+                int trackTicks = 0;
+
+                foreach (MidiMessage midiMessage in midiTrack.Messages)
+                {
+                    trackTicks += midiMessage.DeltaTime;
+                }
+
+                if (trackTicks > ticks)
+                {
+                    ticks = trackTicks;
+                }
+            }
+
+            return ticks;
+        }
+        private void printTrackMessages(MidiTrack midiTrack)
+        {
+            int passedTicks = 0;
+            
+            Debug.Log("New track:");
+
+            foreach (MidiMessage midiMessage in midiTrack.Messages)
+            {
+                passedTicks += midiMessage.DeltaTime;
+                Debug.Log("New Message:");
+                Debug.Log("Passed Ticks: " + passedTicks);
+                Debug.Log("Message Delta Time: " + midiMessage.DeltaTime);
+                Debug.Log("Message type: " + midiMessage.Event.ToString());
+            }
+        }
     }
+
 }
