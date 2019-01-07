@@ -89,7 +89,7 @@ namespace midi_cutter.Assets.Scripts
         {
             if (!trackNums.Contains(0))
             {
-                trackNums.Add(0);
+                trackNums.Insert(0, 0);
             }
             return trackNums.Select(trackNum => this.music.Tracks[trackNum]).ToList();
         }
@@ -106,7 +106,7 @@ namespace midi_cutter.Assets.Scripts
                 FileStream stream = this.createFile(outputFileName);
                 SmfWriter writer = new SmfWriter(stream);
 
-                writer.WriteHeader(music.Format, (short)music.Tracks.Count, music.DeltaTimeSpec);
+                writer.WriteHeader(music.Format, (short)tracks.Count(), music.DeltaTimeSpec);
                 foreach (MidiTrack track in tracks)
                 {
                     writer.WriteTrack(track);
@@ -367,10 +367,7 @@ namespace midi_cutter.Assets.Scripts
             foreach (MidiMessage midiMessage in midiTrack.Messages)
             {
                 passedTicks += midiMessage.DeltaTime;
-                Debug.Log("New Message:");
-                Debug.Log("Passed Ticks: " + passedTicks);
-                Debug.Log("Message Delta Time: " + midiMessage.DeltaTime);
-                Debug.Log("Message type: " + midiMessage.Event.ToString());
+                Debug.Log("New Message: [Passed Ticks: " + passedTicks + "] [Message Delta Time: " + midiMessage.DeltaTime + "] [Message type: " + midiMessage.Event.ToString() + "]");
             }
         }
     }
